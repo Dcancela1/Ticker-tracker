@@ -1,26 +1,63 @@
 "use client";
 
-import { useState } from "react";
-
-const mockPosts = [
-  { id: 1, content: "Just bought some $AAPL, looks promising!" },
-  { id: 2, content: "Loving $TSLA right now, great earnings." },
-  { id: 3, content: "Sold $GME, bought more $AAPL instead." },
-  { id: 4, content: "Big fan of $MSFT long-term." },
-  { id: 5, content: "$TSLA to the moon!" },
-];
+import { useState, useEffect } from "react";
 
 export default function Home() {
   const [searchTerm, setSearchTerm] = useState("");
+  const [posts, setPosts] = useState([]); // Real tweets go here
+
+  useEffect(() => {
+    async function fetchTweets() {
+      const userIds = [
+        "1539633097379774465", // @StockSavvyShay
+        "3363026992",         // @amitisinvesting
+        "19798169",           // @matthughes13
+        "1474087474478755840", // @cantonmeow
+        "1506279565763919872", // @dannycheng2022
+        "305051737",          // @iamtomnash
+        "1511123187713892352", // @Micro2Macr0
+        "1666149370758979585", // @JIMROInvest
+        "1417229738582958082"  // @HolySmokas
+      ];
+
+      try {
+        // Fetch tweets for each user ID
+        const tweets = [];
+        for (const userId of userIds) {
+          const response = await fetch(
+            `https://api.twitter.com/2/users/${userId}/tweets?max_results=10&tweet.fields=text`,
+            {
+              headers: {
+                Authorization: `Bearer ${process.env.NEXT_PUBLIC_X_BEARER_TOKEN}`,
+              },
+            }
+          );
+          const data = await response.json();
+          if (data.data) {
+            tweets.push(
+              ...data.data.map((tweet) => ({
+                id: tweet.id,
+                content: tweet.text,
+              }))
+            );
+          }
+        }
+        setPosts(tweets);
+      } catch (error) {
+        console.error("Error fetching tweets:", error);
+      }
+    }
+    fetchTweets();
+  }, []); // Runs once on page load
 
   // Filter posts based on search term
-  const filteredPosts = mockPosts.filter((post) =>
+  const filteredPosts = posts.filter((post) =>
     post.content.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   // Count ticker mentions
-  const tickerCounts: { [key: string]: number } = {};
-  mockPosts.forEach((post) => {
+  const tickerCounts = {};
+  posts.forEach((post) => {
     const tickers = post.content.match(/\$[A-Z]+/g) || [];
     tickers.forEach((ticker) => {
       tickerCounts[ticker] = (tickerCounts[ticker] || 0) + 1;
